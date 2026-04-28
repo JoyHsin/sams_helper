@@ -247,14 +247,14 @@ func doMonitorStep(session *sams.Session) error {
 					continue
 				}
 				for _, goods := range goodsList {
-					key := fmt.Sprintf("%s|%s|%s", address.AddressId, goods.StoreId, goods.SpuId)
+					key := fmt.Sprintf("%s|%s|%s|%s", address.AddressId, goods.StoreId, goods.SpuId, goods.DeliveryMode)
 					if goods.StockQuantity <= 0 {
 						notified[key] = false
-						fmt.Printf("[-] 无货：%s 库存：%d 单价：%s\n", goods.Title, goods.StockQuantity, tools.SPrintMoney(goods.Price))
+						fmt.Printf("[-] 无货：%s 配送：%s 库存：%d 单价：%s\n", goods.Title, goods.DeliveryMode, goods.StockQuantity, tools.SPrintMoney(goods.Price))
 						continue
 					}
 
-					fmt.Printf("[+] 有货：%s 库存：%d 单价：%s\n", goods.Title, goods.StockQuantity, tools.SPrintMoney(goods.Price))
+					fmt.Printf("[+] 有货：%s 配送：%s 库存：%d 单价：%s\n", goods.Title, goods.DeliveryMode, goods.StockQuantity, tools.SPrintMoney(goods.Price))
 					if notified[key] {
 						continue
 					}
@@ -310,8 +310,9 @@ func readMonitorGoodsKeywords() ([]string, error) {
 }
 
 func formatStockNotice(address sams.Address, goods sams.ShowGoods) string {
-	return fmt.Sprintf("【山姆库存提醒】\n商品：%s\n库存：%d\n价格：%s\n地址：%s %s %s %s\nSPU：%s\nStore：%s",
+	return fmt.Sprintf("【山姆库存提醒】\n商品：%s\n配送：%s\n库存：%d\n价格：%s\n地址：%s %s %s %s\nSPU：%s\nStore：%s",
 		goods.Title,
+		goods.DeliveryMode,
 		goods.StockQuantity,
 		tools.SPrintMoney(goods.Price),
 		address.CityName,

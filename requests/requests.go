@@ -42,7 +42,7 @@ func (request *Request) InitRequest(setting conf.Setting) error {
 		"Content-Type":    []string{"application/json"},
 		"Accept":          []string{"*/*"},
 		"auth-token":      []string{setting.AuthToken},
-		"Accept-Language": []string{"zh-Hans-CN;q=1, en-CN;q=0.9, ga-IE;q=0.8"},
+		"Accept-Language": []string{"zh-CN,zh-Hans;q=0.9"},
 	}
 
 	switch setting.DeviceType {
@@ -51,7 +51,14 @@ func (request *Request) InitRequest(setting conf.Setting) error {
 		request.Headers.Set("user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 11_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E217 MicroMessenger/6.8.0(0x16080000) NetType/WIFI Language/en Branch/Br_trunk MiniProgramEnv/Mac")
 	default: // 默认 ios
 		request.Headers.Set("device-type", "ios")
-		request.Headers.Set("user-agent", "SamClub/5.0.47 (iPhone; iOS 15.4.1; Scale/3.00)")
+		request.Headers.Set("user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 SR-SAMS/5.0.141.0")
+		request.Headers.Set("app-version", "5.0.141")
+		request.Headers.Set("js-version", "1.0.4")
+		request.Headers.Set("language", "CN")
+		request.Headers.Set("system-language", "CN")
+		request.Headers.Set("pageChannelType", "app")
+		request.Headers.Set("zoneType", "1")
+		request.Headers.Set("rcs", "5")
 	}
 
 	return nil

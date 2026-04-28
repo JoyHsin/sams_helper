@@ -6,6 +6,13 @@ import (
 	"strings"
 )
 
+func deliveryModeName(isFastDelivery bool) string {
+	if isFastDelivery {
+		return "极速达"
+	}
+	return "全城配"
+}
+
 func parseGoodsList(g gjson.Result) (error, []ShowGoods) {
 	goodsList := make([]ShowGoods, 0)
 	for _, v := range g.Get("dataList").Array() {
@@ -25,7 +32,7 @@ func goodsTitleMatch(goods []ShowGoods, keyword string) (error, []ShowGoods) {
 	return nil, goodsList
 }
 
-func (session *Session) GetGoodsFromSearch(keyword string) (error, []ShowGoods) {
+func (session *Session) getGoodsFromSearch(keyword string, isFastDelivery bool) (error, []ShowGoods) {
 	var goodsList = make([]ShowGoods, 0)
 	var total int64 = 20
 	var page int64 = 1      // 初始页数
@@ -40,7 +47,7 @@ func (session *Session) GetGoodsFromSearch(keyword string) (error, []ShowGoods) 
 			Keyword:        keyword,
 			UserUid:        session.Uid,
 			AddressVO:      session.Address.ToAddressVO(),
-			IsFastDelivery: false,
+			IsFastDelivery: isFastDelivery,
 			PageNum:        page,
 		}
 		for _, v := range session.StoreList {
@@ -56,7 +63,22 @@ func (session *Session) GetGoodsFromSearch(keyword string) (error, []ShowGoods) 
 		page += 1
 		_, goodsListTmp := parseGoodsList(result)
 		_, goodsListTmp = goodsTitleMatch(goodsListTmp, keyword)
+		for i := range goodsListTmp {
+			goodsListTmp[i].DeliveryMode = deliveryModeName(isFastDelivery)
+		}
 		goodsList = append(goodsList, goodsListTmp...)
 	}
 	return nil, goodsList
+}
+
+func (session *Session) GetGoodsFromSearch(keyword string) (error, []ShowGoods) {
+	err, fastGoodsList := session.getGoodsFromSearch(keyword, true)
+	if err != nil {
+		return err, nil
+	}
+	err, cityGoodsList := session.getGoodsFromSearch(keyword, false)
+	if err != nil {
+		return err, nil
+	}
+	return nil, append(fastGoodsList, cityGoodsList...)
 }

@@ -80,6 +80,7 @@ type ShowGoods struct {
 	StockQuantity int64   `json:"stockQuantity"`
 	BrandId       string  `json:"brandId"`
 	Weight        float64 `json:"weight"`
+	DeliveryMode  string  `json:"-"`
 }
 
 func (goods NormalGoods) ToGoods() Goods {
