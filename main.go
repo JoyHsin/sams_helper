@@ -10,6 +10,7 @@ import (
 	"sams_helper/requests"
 	"sams_helper/sams"
 	"sams_helper/tools"
+	"sort"
 	"strings"
 	"time"
 )
@@ -18,6 +19,13 @@ func main() {
 	err, session := doInitStep()
 	if err != nil {
 		fmt.Printf("[!] %s\n", err)
+		return
+	}
+
+	if session.Setting.RunMode == 3 {
+		if err = doMonitorStep(&session); err != nil {
+			fmt.Printf("[!] %s\n", err)
+		}
 		return
 	}
 
@@ -53,7 +61,7 @@ func doInitStep() (error, sams.Session) {
 	}
 
 	// 配置检查
-	if !(setting.RunMode == 1 || setting.RunMode == 2) {
+	if !(setting.RunMode == 1 || setting.RunMode == 2 || setting.RunMode == 3) {
 		return conf.RunModeErr, sams.Session{}
 	}
 
@@ -73,6 +81,10 @@ func doInitStep() (error, sams.Session) {
 	session := sams.Session{}
 	if err = session.InitSession(request, setting); err != nil {
 		return err, sams.Session{}
+	}
+
+	if setting.RunMode == 3 {
+		return nil, session
 	}
 
 	// 设置支付方式
@@ -193,6 +205,122 @@ func stepCoupon(session *sams.Session) error {
 		fmt.Printf("[!] %s\n", err)
 	}
 	return nil
+}
+
+func doMonitorStep(session *sams.Session) error {
+	addressList, err := selectMonitorAddresses(session)
+	if err != nil {
+		return err
+	}
+	goodsKeywords, err := readMonitorGoodsKeywords()
+	if err != nil {
+		return err
+	}
+	if len(goodsKeywords) == 0 {
+		return errors.New("goodsList.yaml 中未配置要监听的商品")
+	}
+
+	interval := session.Setting.MonitorSet.IntervalSeconds
+	if interval <= 0 {
+		interval = 60
+	}
+
+	notified := make(map[string]bool)
+	fmt.Printf("########## 启动库存监听：%d 个地址，%d 个商品，每 %d 秒检查一次 ##########\n", len(addressList), len(goodsKeywords), interval)
+	for {
+		for _, address := range addressList {
+			session.Address = address
+			if err = session.GetStoreList(); err != nil {
+				fmt.Printf("[!] 获取门店失败：%s %s %s，%s\n", address.DistrictName, address.ReceiverAddress, address.DetailAddress, err)
+				continue
+			}
+
+			for _, keyword := range goodsKeywords {
+				fmt.Printf("########## 监听库存【%s】地址：%s %s %s 商品：%s ##########\n", time.Now().Format("15:04:05"), address.DistrictName, address.ReceiverAddress, address.DetailAddress, keyword)
+				err, goodsList := session.GetGoodsFromSearch(keyword)
+				if err != nil {
+					fmt.Printf("[!] 搜索商品失败：%s，%s\n", keyword, err)
+					continue
+				}
+				if len(goodsList) == 0 {
+					fmt.Printf("[!] 未查询到相关商品：%s\n", keyword)
+					continue
+				}
+				for _, goods := range goodsList {
+					key := fmt.Sprintf("%s|%s|%s", address.AddressId, goods.StoreId, goods.SpuId)
+					if goods.StockQuantity <= 0 {
+						notified[key] = false
+						fmt.Printf("[-] 无货：%s 库存：%d 单价：%s\n", goods.Title, goods.StockQuantity, tools.SPrintMoney(goods.Price))
+						continue
+					}
+
+					fmt.Printf("[+] 有货：%s 库存：%d 单价：%s\n", goods.Title, goods.StockQuantity, tools.SPrintMoney(goods.Price))
+					if notified[key] {
+						continue
+					}
+					message := formatStockNotice(address, goods)
+					if err = notice.DoMessage(session.Setting.NoticeSet, message); err != nil {
+						fmt.Printf("[!] 发送通知失败：%s\n", err)
+					} else {
+						notified[key] = true
+					}
+				}
+			}
+		}
+		time.Sleep(time.Duration(interval) * time.Second)
+	}
+}
+
+func selectMonitorAddresses(session *sams.Session) ([]sams.Address, error) {
+	err, addressList := session.GetAddress()
+	if err != nil {
+		return nil, err
+	}
+	if len(addressList) == 0 {
+		return nil, conf.NoValidAddressErr
+	}
+	if len(session.Setting.MonitorSet.AddressIndexes) == 0 {
+		return addressList, nil
+	}
+
+	selected := make([]sams.Address, 0)
+	for _, index := range session.Setting.MonitorSet.AddressIndexes {
+		if index < 0 || index >= len(addressList) {
+			return nil, errors.New(fmt.Sprintf("monitorSet.addressIndexes 中的地址序号 %d 超出范围", index))
+		}
+		selected = append(selected, addressList[index])
+	}
+	return selected, nil
+}
+
+func readMonitorGoodsKeywords() ([]string, error) {
+	var goodsList map[string]int64
+	err := tools.ReadFromYaml(tools.GetFilePath("goodsList.yaml"), &goodsList)
+	if err != nil {
+		return nil, err
+	}
+	keywords := make([]string, 0, len(goodsList))
+	for goodsName := range goodsList {
+		if strings.TrimSpace(goodsName) != "" {
+			keywords = append(keywords, goodsName)
+		}
+	}
+	sort.Strings(keywords)
+	return keywords, nil
+}
+
+func formatStockNotice(address sams.Address, goods sams.ShowGoods) string {
+	return fmt.Sprintf("【山姆库存提醒】\n商品：%s\n库存：%d\n价格：%s\n地址：%s %s %s %s\nSPU：%s\nStore：%s",
+		goods.Title,
+		goods.StockQuantity,
+		tools.SPrintMoney(goods.Price),
+		address.CityName,
+		address.DistrictName,
+		address.ReceiverAddress,
+		address.DetailAddress,
+		goods.SpuId,
+		goods.StoreId,
+	)
 }
 
 func stepStore(session *sams.Session) error {

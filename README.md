@@ -24,14 +24,41 @@
 # 山姆会员 Token
 authToken: "74xxxxxxxxxxxx"
 # 运行模式
-# 1->山姆抢购 | 2->保供抢购
-runMode: 1
+# 1->山姆抢购 | 2->保供抢购 | 3->库存监听（只通知，不下单）
+runMode: 3
 # 配送方式
 # 1->极速达 | 2->全城配
 deliveryType: 1
 ```
 
 其他配置（尤其是通知相关配置）请查看文件内注释自行修改。
+
+### 库存监听
+
+设置 `runMode: 3` 后，程序会读取 `goodsList.yaml` 中的商品名称作为搜索关键字，按 `monitorSet.addressIndexes` 配置的地址轮询库存；`addressIndexes` 为空时监听账号下全部地址。发现库存大于 0 时发送通知，不会下单或修改购物车。
+
+同时启用 Bark 和 Email：
+
+```yaml
+noticeSet:
+  noticeTypes: [1, 4]
+  bark:
+    barkServer: "https://api.day.app"
+    barkToken: "<barkToken>"
+    barkSound: "telegraph"
+  email:
+    smtpHost: "smtp.example.com"
+    smtpPort: 587
+    username: "<email>"
+    password: "<password>"
+    from: "<email>"
+    to: ["<to@example.com>"]
+    subject: "山姆库存提醒"
+
+monitorSet:
+  intervalSeconds: 60
+  addressIndexes: [0, 1]
+```
 
 ## 功能支持 
 

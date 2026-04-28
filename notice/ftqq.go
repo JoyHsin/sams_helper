@@ -20,11 +20,19 @@ type FTQQSet struct {
 
 // FTQQPush Server酱，具体查看：https://sct.ftqq.com/
 func FTQQPush(ftqqSet FTQQSet) error {
+	return FTQQPushMessage(ftqqSet, "")
+}
+
+func FTQQPushMessage(ftqqSet FTQQSet, message string) error {
+	desp := ftqqSet.Desp
+	if message != "" {
+		desp = message
+	}
 	urlPath := fmt.Sprintf("%s/%s.send", ftqqSet.Server, ftqqSet.SendKey)
 	data := url.Values{
 		"channel": []string{ftqqSet.Channel},
 		"text":    []string{ftqqSet.Title},
-		"desp":    []string{ftqqSet.Desp},
+		"desp":    []string{desp},
 	}
 	client := &http.Client{Timeout: 60 * time.Second}
 	resp, err := client.Post(
@@ -35,7 +43,7 @@ func FTQQPush(ftqqSet FTQQSet) error {
 	if err != nil {
 		return err
 	}
-	_ = resp.Body.Close()
+	defer resp.Body.Close()
 	if resp.StatusCode == 200 {
 		return nil
 	} else {

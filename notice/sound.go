@@ -13,8 +13,15 @@ type SoundSet struct {
 
 // MacSound only for mac
 func MacSound(soundSet SoundSet) error {
+	return MacSoundMessage(soundSet, "")
+}
+
+func MacSoundMessage(soundSet SoundSet, message string) error {
+	if message == "" {
+		message = soundSet.Message
+	}
 	for i := 0; i < soundSet.Times; i++ {
-		err := exec.Command("say", soundSet.Message, fmt.Sprintf("--voice=%s", soundSet.Voice)).Run()
+		err := exec.Command("say", message, fmt.Sprintf("--voice=%s", soundSet.Voice)).Run()
 		if err != nil {
 			return err
 		}

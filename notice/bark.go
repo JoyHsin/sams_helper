@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -16,13 +17,20 @@ type BarkSet struct {
 }
 
 func BarkPush(barkSet BarkSet) error {
-	urlPath := fmt.Sprintf("%s/%s/%s?sound=%s", barkSet.Server, barkSet.Token, barkSet.Message, barkSet.Sound)
+	return BarkPushMessage(barkSet, "")
+}
+
+func BarkPushMessage(barkSet BarkSet, message string) error {
+	if message == "" {
+		message = barkSet.Message
+	}
+	urlPath := fmt.Sprintf("%s/%s/%s?sound=%s", barkSet.Server, barkSet.Token, url.PathEscape(message), url.QueryEscape(barkSet.Sound))
 	client := &http.Client{Timeout: 60 * time.Second}
 	resp, err := client.Get(urlPath)
 	if err != nil {
 		return err
 	}
-	_ = resp.Body.Close()
+	defer resp.Body.Close()
 	if resp.StatusCode == 200 {
 		return nil
 	} else {

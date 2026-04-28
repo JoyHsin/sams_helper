@@ -4,7 +4,7 @@
 # 山姆会员 Token
 authToken: "<authToken>"
 # 运行模式
-# 1->山姆抢购 | 2->保供抢购
+# 1->山姆抢购 | 2->保供抢购 | 3->库存监听（只通知，不下单）
 runMode: 1
 # 配送方式
 # 1->极速达 | 2->全城配
@@ -59,8 +59,10 @@ saasId: "1818"
 # 通知设置
 noticeSet:
   # 通知类型
-  # 0->不通知 | 1->Bark | 2->Server酱 | 3->OSX 系统语音
+  # 0->不通知 | 1->Bark | 2->Server酱 | 3->OSX 系统语音 | 4->Email
   noticeType: 0
+  # 多通知通道，设置后会覆盖 noticeType。例：[1,4] 同时发送 Bark 和 Email
+  noticeTypes: [1]
 
   # Bark 通知配置
   bark:
@@ -95,6 +97,25 @@ noticeSet:
     soundTimes: 2
     # 播报声音
     soundVoice: "Ting-ting"
+
+  # Email 通知配置
+  email:
+    smtpHost: "smtp.example.com"
+    smtpPort: 587
+    username: "<email>"
+    password: "<password>"
+    from: "<email>"
+    to: ["<to@example.com>"]
+    subject: "山姆库存提醒"
+
+###############################
+# 库存监听模式（runMode: 3）
+###############################
+monitorSet:
+  # 轮询间隔（秒）
+  intervalSeconds: 60
+  # 要监听的地址序号；为空则监听账号下所有地址。序号和程序启动时地址列表一致，从 0 开始
+  addressIndexes: []
 
 ###############################
 # 高级功能
